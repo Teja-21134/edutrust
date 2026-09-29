@@ -1,0 +1,20 @@
+# Java
+backend/target/
+# Node
+frontend/node_modules/
+frontend/dist/
+# Python
+__pycache__/
+.venv/
+# Env / secrets
+.env
+application-local.yml
+# IDE
+.idea/
+.vscode/
+# Model files
+*.onnx
+*.gguf
+models/
+# DB data
+pgdata/
