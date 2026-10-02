@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: edutrust-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/edutrust}
+    username: ${DB_USERNAME:edutrust}
+    password: ${DB_PASSWORD:edutrust}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8080}

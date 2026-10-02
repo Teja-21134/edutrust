@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+if command -v mvn >/dev/null 2>&1; then exec mvn "$@"; fi
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$SCRIPT_DIR/mvnw.ps1" "$@"

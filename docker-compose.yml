@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: edutrust-postgres
+    environment:
+      POSTGRES_DB: edutrust
+      POSTGRES_USER: edutrust
+      POSTGRES_PASSWORD: edutrust
+    ports:
+      - "5433:5432"
+    volumes:
+      - edutrust-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  edutrust-postgres-data:
