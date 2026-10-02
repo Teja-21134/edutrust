@@ -9,6 +9,8 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  flyway:
+    enabled: true
 
 server:
   port: ${SERVER_PORT:8080}
