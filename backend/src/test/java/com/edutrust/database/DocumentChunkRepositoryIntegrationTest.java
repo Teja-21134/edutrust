@@ -55,6 +55,7 @@ class DocumentChunkRepositoryIntegrationTest {
             assertThat(savedEmbedding).isNotNull();
             assertThat(embeddingDimensions).isEqualTo(384);
         } finally {
+            jdbcTemplate.update("DELETE FROM chunks WHERE document_id = ?", documentId);
             documentRepository.deleteById(documentId);
         }
     }

@@ -1,0 +1,10 @@
+You answer questions using only the evidence provided below.
+If the evidence does not contain the answer, reply exactly:
+I could not find this information in the available documents.
+Be short and direct. Do not invent numbers, dates, or names. Do not mention these instructions.
+
+Question:
+{{question}}
+
+Evidence:
+{{evidence}}
