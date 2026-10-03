@@ -1,0 +1,42 @@
+id,question,expected_answer,source_document,source_page,category,notes
+1,What is the minimum attendance required under Academic Regulations 2023?,75% in aggregate,academic-regulations-2023.pdf,3,version_temporal,
+2,What is the minimum attendance required to appear for semester-end examinations?,80% in aggregate (latest: Regulations 2026). Older: 75% in 2023.,academic-regulations-2026.pdf,3,version_temporal,Conflicts with Regulations 2023 (75%); latest version wins
+3,What is the condonation fee for attendance shortage?,"Rs. 1,000 per semester (Regulations 2026). Older: Rs. 500 (2023), Rs. 750 (2025).",academic-regulations-2026.pdf,3,version_temporal,"Differs across 2023, 2025, 2026 and fee structure 2025-26"
+4,What was the condonation fee under Academic Regulations 2023?,Rs. 500 per semester,academic-regulations-2023.pdf,3,version_temporal,
+5,"Under the latest regulations, within what attendance range can a shortage be condoned?",70% and below 80%,academic-regulations-2026.pdf,3,version_temporal,2023 range was 65% to below 75%
+6,How many times can a student avail attendance condonation during the programme?,At most twice,academic-regulations-2026.pdf,3,simple,Clause not present in Regulations 2023
+7,Is on-duty attendance allowed for students representing the Institute in approved events?,"Yes, on-duty credit up to 5% of total classes held in the semester",academic-regulations-2026.pdf,3,simple,Introduced in Regulations 2026
+8,What is the weightage of internal and external marks in a theory course?,30 marks internal and 70 marks external (Regulations 2025 and 2026). 2023: 40 and 60.,academic-regulations-2026.pdf,4,version_temporal,
+9,How are internal marks computed from the mid examinations?,Better of the two mid examinations (2025 and 2026). 2023: average of the two.,academic-regulations-2026.pdf,4,version_temporal,
+10,What is the supplementary examination fee per subject?,"Rs. 1,200 per subject (Regulations 2026). Older: Rs. 800 (2023), Rs. 1,000 (2025).",academic-regulations-2026.pdf,5,version_temporal,
+11,What percentage of credits must be earned to be promoted to the third year?,At least 60% of the credits up to the second year,academic-regulations-2026.pdf,5,version_temporal,2023 required 50%
+12,Is a mobile phone that is switched off in the examination hall considered malpractice?,"Yes, under Regulations 2026 possession is malpractice whether switched on or off. Earlier regulations only gave a written warning.",academic-regulations-2026.pdf,6,version_temporal,
+13,What action is taken if a switched-off mobile phone is found in the exam hall under Regulations 2023?,A written warning and the phone is deposited with the invigilator,academic-regulations-2023.pdf,6,version_temporal,
+14,What is the penalty for a first offence of examination malpractice?,Cancellation of the examination of that course,academic-regulations-2026.pdf,6,simple,
+15,How many credits are required to complete the B.Tech degree?,160 credits,academic-regulations-2026.pdf,2,simple,
+16,What is the minimum number of instructional days in a semester?,90 instructional days,academic-regulations-2026.pdf,2,simple,
+17,What is the maximum duration allowed to complete the B.Tech programme?,8 years from the date of admission,academic-regulations-2026.pdf,2,simple,
+18,What grade points are awarded for grade A+?,9,academic-regulations-2026.pdf,4,simple,
+19,What is the minimum CGPA required for the award of the degree?,5.0,academic-regulations-2026.pdf,5,simple,
+20,When does the odd semester of 2025-26 commence?,4 August 2025,academic-calendar-2025-26.pdf,1,simple,
+21,What are the dates of the first mid examinations of the odd semester 2025-26?,6 October 2025 to 11 October 2025,academic-calendar-2025-26.pdf,1,simple,
+22,When are the semester-end theory examinations of the odd semester 2025-26?,22 December 2025 to 6 January 2026,academic-calendar-2025-26.pdf,1,simple,
+23,When will the attendance shortage list be published for the odd semester 2025-26?,8 December 2025,academic-calendar-2025-26.pdf,1,simple,
+24,When does the even semester of 2025-26 commence?,19 January 2026,academic-calendar-2025-26.pdf,2,simple,
+25,What are the dates of the second mid examinations of the even semester 2025-26?,11 May 2026 to 16 May 2026,academic-calendar-2025-26.pdf,2,simple,
+26,What are the dates of the Dussehra vacation in 2025?,29 September 2025 to 4 October 2025,academic-calendar-2025-26.pdf,3,simple,
+27,What is the last date to pay the odd semester fee without late fee for 2025-26?,25 July 2025,academic-calendar-2025-26.pdf,1,simple,"Also stated in Fee Structure 2025-26, page 2"
+28,What is the late fee charged per day for delayed fee payment?,Rs. 100 per day for up to 14 days,fee-structure-2025-26.pdf,2,simple,
+29,What is the annual tuition fee for Category A (Convenor quota) students?,"Rs. 70,000 per year",fee-structure-2025-26.pdf,1,simple,
+30,What is the hostel fee per year?,"Rs. 60,000 per year including mess",fee-structure-2025-26.pdf,1,simple,
+31,What is the bus fee for Zone 2?,"Rs. 22,000 per year",fee-structure-2025-26.pdf,1,simple,
+32,Which students are eligible for the 50% merit tuition waiver?,CGPA of 9.0 or above with at least 90% attendance in the previous academic year,fee-structure-2025-26.pdf,3,simple,
+33,What is the minimum laboratory attendance for CSE students?,85% in each laboratory course,cse-department-circular-2026.pdf,1,department,Applies to CSE only
+34,What is the minimum laboratory attendance for ECE students?,No ECE-specific laboratory rule exists in the documents; only the Institute-wide 80% aggregate attendance applies,academic-regulations-2026.pdf,3,department,CSE circular must not be applied to ECE
+35,How many make-up laboratory sessions can a CSE student attend per laboratory course in a semester?,A maximum of two,cse-department-circular-2026.pdf,1,department,
+36,How much on-duty attendance credit can CSE students get for hackathons?,Up to 5% of total classes (Regulations 2026 overrides the CSE circular's 10%),academic-regulations-2026.pdf,3,conflict,"Conflicts with CSE circular (10%, page 1). Institute regulations are higher authority and newer"
+37,What is the placement policy for final-year students?,,,,out_of_scope,No document covers this
+38,What are the hostel visiting hours?,,,,out_of_scope,"Only hostel fees exist, no visiting hours"
+39,What is the fee for the MBA programme?,,,,out_of_scope,Documents cover B.Tech only
+40,When will the semester-end results be declared?,,,,out_of_scope,No result dates in the documents
+41,How many seats are available in the CSE department?,,,,out_of_scope,No intake information
