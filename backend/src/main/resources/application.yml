@@ -16,6 +16,8 @@ server:
   port: ${SERVER_PORT:8080}
 
 app:
+  ingestion:
+    repeated-line-page-ratio: ${INGESTION_REPEATED_LINE_PAGE_RATIO:0.6}
   jwt:
     secret: ${JWT_SECRET:edutrust-development-secret-change-me-2026}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
