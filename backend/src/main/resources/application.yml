@@ -11,6 +11,10 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 server:
   port: ${SERVER_PORT:8080}
@@ -28,3 +32,12 @@ app:
     student-name: ${STUDENT_NAME:College Student}
     student-email: ${STUDENT_EMAIL:student@college.edu}
     student-password: ${STUDENT_PASSWORD:student123}
+
+edutrust:
+  embedding:
+    model: ${EDUTRUST_EMBEDDING_MODEL:bge-small-en-v1.5}
+    dimensions: 384
+    batch-size: ${EDUTRUST_EMBEDDING_BATCH_SIZE:16}
+  chunking:
+    max-chars: ${EDUTRUST_CHUNKING_MAX_CHARS:800}
+    overlap-chars: ${EDUTRUST_CHUNKING_OVERLAP_CHARS:100}
