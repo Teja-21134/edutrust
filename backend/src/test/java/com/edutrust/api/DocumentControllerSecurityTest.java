@@ -1,5 +1,6 @@
 package com.edutrust.api;
 
+import com.edutrust.IntegrationTestBase;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class DocumentControllerSecurityTest {
+class DocumentControllerSecurityTest extends IntegrationTestBase {
 
     @Autowired
     private MockMvc mockMvc;

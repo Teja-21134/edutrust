@@ -7,6 +7,7 @@ frontend/dist/
 # Python
 __pycache__/
 .venv/
+evaluation/.venv/
 # Env / secrets
 .env
 application-local.yml

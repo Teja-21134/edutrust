@@ -1,8 +1,7 @@
 package com.edutrust.retrieval;
 
-import com.edutrust.database.DocumentRepository;
+import com.edutrust.IntegrationTestBase;
 import com.edutrust.ingestion.IngestionService;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,31 +11,19 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-class SearchServiceIntegrationTest {
+class SearchServiceIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private IngestionService ingestionService;
 
     @Autowired
     private SearchService searchService;
-
-    @Autowired
-    private DocumentRepository documentRepository;
-
-    private final List<UUID> createdDocumentIds = new ArrayList<>();
-
-    @AfterEach
-    void removeTestDocuments() {
-        createdDocumentIds.forEach(documentRepository::deleteById);
-        createdDocumentIds.clear();
-    }
 
     @Test
     void attendanceSearchFindsPageThreeAmongTopThreeHits() throws IOException {
@@ -72,7 +59,6 @@ class SearchServiceIntegrationTest {
                 new IngestionService.DocumentMetadata(
                         "Search Test Academic Regulations 2026", "All", "Regulations",
                         "2026-27", "v3", LocalDate.of(2026, 6, 15), "Dean Academics"));
-        createdDocumentIds.add(result.id());
         return result.id();
     }
 }

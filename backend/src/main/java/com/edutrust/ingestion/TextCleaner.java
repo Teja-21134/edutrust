@@ -94,6 +94,8 @@ public class TextCleaner {
 
     private boolean canJoinToPrevious(List<String> cleanedLines, String sourceLine, String normalizedLine) {
         if (cleanedLines.isEmpty()
+                || cleanedLines.get(cleanedLines.size() - 1).contains(" | ")
+                || normalizedLine.contains(" | ")
                 || isHeading(cleanedLines.get(cleanedLines.size() - 1))
                 || isHeading(normalizedLine)
                 || isTableRow(sourceLine)

@@ -40,8 +40,31 @@ class PdfIngestionTest {
                 .doesNotContain("XYZ INSTITUTE OF TECHNOLOGY"));
     }
 
+    @Test
+    void extractsCalendarTableRowsAndSpaces() throws IOException {
+        List<PdfPage> pages = cleaner.clean(extractor.extract(resource("academic-calendar-2025-26.pdf"),
+                "academic-calendar-2025-26.pdf"));
+
+        String pageThree = pages.get(2).text();
+        assertThat(pageThree).contains("Dussehra vacation | 29 September 2025 to 4 October 2025");
+        assertThat(pageThree).contains("Holi | 4 March 2026");
+        assertThat(pageThree).contains("Maha Shivaratri");
+    }
+
+    @Test
+    void extractsFeeTableRows() throws IOException {
+        List<PdfPage> pages = cleaner.clean(extractor.extract(resource("fee-structure-2025-26.pdf"),
+                "fee-structure-2025-26.pdf"));
+
+        assertThat(pages.get(0).text()).contains("Hostel fee (including mess) | Rs. 60,000 per year");
+    }
+
     private InputStream samplePdf() {
-        InputStream stream = getClass().getResourceAsStream("/documents/academic-regulations-2026.pdf");
+        return resource("academic-regulations-2026.pdf");
+    }
+
+    private InputStream resource(String name) {
+        InputStream stream = getClass().getResourceAsStream("/documents/" + name);
         assertThat(stream).as("sample PDF resource").isNotNull();
         return stream;
     }

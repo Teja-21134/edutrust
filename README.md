@@ -27,3 +27,9 @@ status
 ------
 UP
 ```
+
+Create the test database once before running backend integration tests:
+
+```powershell
+docker exec edutrust-postgres psql -U edutrust -d edutrust -c "CREATE DATABASE edutrust_test;"
+```

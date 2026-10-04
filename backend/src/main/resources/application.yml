@@ -22,6 +22,11 @@ server:
 app:
   ingestion:
     repeated-line-page-ratio: ${INGESTION_REPEATED_LINE_PAGE_RATIO:0.6}
+    pdf:
+      spacing-tolerance: ${INGESTION_PDF_SPACING_TOLERANCE:0.25}
+      average-char-tolerance: ${INGESTION_PDF_AVERAGE_CHAR_TOLERANCE:0.25}
+      column-gap-points: ${INGESTION_PDF_COLUMN_GAP_POINTS:8}
+      line-y-tolerance-points: ${INGESTION_PDF_LINE_Y_TOLERANCE_POINTS:2.5}
   jwt:
     secret: ${JWT_SECRET:edutrust-development-secret-change-me-2026}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}

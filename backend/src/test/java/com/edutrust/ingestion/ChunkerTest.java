@@ -47,6 +47,18 @@ class ChunkerTest {
         assertThat(attendanceChunk.text()).startsWith("4. Attendance requirements");
     }
 
+    @Test
+    void repeatsTableTitleAndHeaderWhenTableSpansChunks() {
+        Chunker chunker = new Chunker(45, 10);
+        List<Chunk> chunks = chunker.chunk(List.of(new PdfPage(1, "Fees\nItem | Amount\nTuition | Rs. 100\nHostel | Rs. 200\nLibrary | Rs. 300")), "fees.pdf");
+
+        assertThat(chunks).hasSize(3);
+        assertThat(chunks).allSatisfy(chunk -> {
+            assertThat(chunk.text()).contains("Fees\nItem | Amount");
+            assertThat(chunk.text()).doesNotContain("Tuition | Rs. 100\nHostel | Rs. 200");
+        });
+    }
+
     private InputStream samplePdf() {
         InputStream stream = getClass().getResourceAsStream("/documents/academic-regulations-2026.pdf");
         assertThat(stream).as("sample PDF resource").isNotNull();

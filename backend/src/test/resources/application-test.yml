@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/edutrust_test
+    username: edutrust
+    password: edutrust
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate

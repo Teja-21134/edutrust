@@ -17,7 +17,7 @@ public class Chunker {
     private static final Pattern SECTION_HEADING = Pattern.compile("^\\d+\\.\\s+.*");
     private static final Pattern NUMBERED_CLAUSE = Pattern.compile("^\\d+(?:\\.\\d+)+[.)]?\\s+.*");
     private static final Pattern TABLE_ROW = Pattern.compile(
-            "^(?:\\|.*\\||\\d+\\s+to\\s+\\d+\\s+.*|(?:Below|Absent)\\b.*)$", Pattern.CASE_INSENSITIVE);
+            "^(?:.*\\|.*|\\d+\\s+to\\s+\\d+\\s+.*|(?:Below|Absent)\\b.*)$", Pattern.CASE_INSENSITIVE);
 
     private final int maxCharacters;
     private final int overlapCharacters;
@@ -165,12 +165,17 @@ public class Chunker {
         List<Chunk> result = new ArrayList<>();
         String[] rows = text.split("\\R");
         String tableHeading = rows[0];
+        String tableHeader = rows.length > 1 ? rows[1] : "";
         StringBuilder current = new StringBuilder(tableHeading);
-        for (int rowIndex = 1; rowIndex < rows.length; rowIndex++) {
+        if (!tableHeader.isBlank()) {
+            current.append('\n').append(tableHeader);
+        }
+        for (int rowIndex = 2; rowIndex < rows.length; rowIndex++) {
             String candidate = current + "\n" + rows[rowIndex];
-            if (candidate.length() > contentCapacity && current.length() > tableHeading.length()) {
+            if (candidate.length() > contentCapacity && current.length() > tableHeading.length() + tableHeader.length()) {
                 result.add(new Chunk(-1, pageNumber, withHeading(heading, current.toString())));
-                current = new StringBuilder(tableHeading).append('\n').append(rows[rowIndex]);
+                current = new StringBuilder(tableHeading).append('\n').append(tableHeader)
+                        .append('\n').append(rows[rowIndex]);
             } else {
                 current = new StringBuilder(candidate);
             }
@@ -200,12 +205,13 @@ public class Chunker {
 
     private boolean isTableHeading(List<String> lines, int index) {
         if (index + 1 >= lines.size() || isSectionHeading(lines.get(index)) || isNumberedClause(lines.get(index))) {
-            return false;
+            return index + 1 < lines.size() && isTableRow(lines.get(index + 1).trim())
+                    && !isSectionHeading(lines.get(index));
         }
         String line = lines.get(index).trim();
         String nextLine = lines.get(index + 1).trim();
-        return (line.contains("|") || line.toLowerCase().contains("grade") || line.toLowerCase().contains("amount"))
-                && isTableRow(nextLine);
+        return isTableRow(nextLine) && (!isTableRow(line)
+                || line.toLowerCase().contains("grade") || line.toLowerCase().contains("amount"));
     }
 
     private boolean isTableRow(String line) {

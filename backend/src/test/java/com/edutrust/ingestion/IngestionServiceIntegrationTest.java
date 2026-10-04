@@ -1,5 +1,6 @@
 package com.edutrust.ingestion;
 
+import com.edutrust.IntegrationTestBase;
 import com.edutrust.database.DocumentRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-class IngestionServiceIntegrationTest {
+class IngestionServiceIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private IngestionService ingestionService;

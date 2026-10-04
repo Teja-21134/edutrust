@@ -1,5 +1,6 @@
 package com.edutrust.database;
 
+import com.edutrust.IntegrationTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,7 +13,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-class DocumentChunkRepositoryIntegrationTest {
+class DocumentChunkRepositoryIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private DocumentRepository documentRepository;

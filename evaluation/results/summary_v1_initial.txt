@@ -1,0 +1,19 @@
+Number of questions: 41
+Recall@5: 0.9444
+MRR: 0.7454
+Answered rate: 0.2927
+Auto-correct rate overall: 0.2571
+Out-of-scope refusal rate: 0.8000
+Average time_ms: 28084.10
+Median time_ms: 27267.00
+Retrieval misses: 4, 34
+
+Auto-correct rate by category:
+  conflict: 0.0000
+  department: 0.0000
+  out_of_scope: 0.8000
+  simple: 0.2105
+  version_temporal: 0.1250
+
+Manual accuracy by category:
+  No manual_correct values filled.

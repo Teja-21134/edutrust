@@ -1,0 +1,2 @@
+id,category,question,expected_answer,retrieved_top5,expected_rank,retrieval_hit_at_5,answer,answered,sources,time_ms,auto_correct,manual_correct
+1,version_temporal,What is the minimum attendance required under Academic Regulations 2023?,75% in aggregate,CSE Department Circular 2026|1|0.7855; Academic Regulations 2023|3|0.7508; Academic Regulations 2026|3|0.7501; Academic Regulations 2025|3|0.7488; Academic Regulations 2026|3|0.7297,2,true,I could not find this information in the available documents.,false,[],33840,false,
