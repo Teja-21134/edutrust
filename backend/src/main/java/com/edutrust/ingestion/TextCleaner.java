@@ -21,9 +21,11 @@ public class TextCleaner {
     private static final Pattern PAGE_NUMBER_FRAGMENT = Pattern.compile(
             "(?i)\\bpage\\s+\\d+\\s+(?:of|/)\\s+\\d+\\b");
     private static final Pattern HEADING = Pattern.compile(
-            "^(?:\\d+(?:\\.\\d+)*[.)]?\\s+|[A-Z][A-Z0-9 &:/()'\\-]{4,}$)");
+            "^(?:\\d+\\.\\s+|[A-Z][A-Z0-9 &:/()'\\-]{4,}$)");
     private static final Pattern TABLE_ROW = Pattern.compile(
-            "^(?:[|]|.*\\s{2,}.*|.*\\t.*)$");
+            "^(?:.*\\|.*|.*\\s{2,}.*|.*\\t.*)$");
+    private static final Pattern CLAUSE_START = Pattern.compile(
+            "^(?:\\d+(?:\\.\\d+)+[.)]?|\\([a-z]\\))\\s+[A-Z].*");
     private static final Pattern LIST_OR_NUMBERED_LINE = Pattern.compile(
             "^(?:[-*•]\\s+|\\d+[.)]\\s+).*");
     private static final Pattern TERMINAL_PUNCTUATION = Pattern.compile(".*[.!?:;]$");
@@ -98,12 +100,16 @@ public class TextCleaner {
                 || normalizedLine.contains(" | ")
                 || isHeading(cleanedLines.get(cleanedLines.size() - 1))
                 || isHeading(normalizedLine)
+                || CLAUSE_START.matcher(normalizedLine).matches()
                 || isTableRow(sourceLine)
                 || LIST_OR_NUMBERED_LINE.matcher(normalizedLine).matches()) {
             return false;
         }
 
         String previous = cleanedLines.get(cleanedLines.size() - 1);
+        if (CLAUSE_START.matcher(previous).matches()) {
+            return true;
+        }
         return !TERMINAL_PUNCTUATION.matcher(previous).matches()
                 || Character.isLowerCase(normalizedLine.charAt(0));
     }

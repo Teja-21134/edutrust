@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,21 +16,34 @@ public class Chunker {
 
     private static final Logger log = LoggerFactory.getLogger(Chunker.class);
     private static final Pattern SECTION_HEADING = Pattern.compile("^\\d+\\.\\s+.*");
-    private static final Pattern NUMBERED_CLAUSE = Pattern.compile("^\\d+(?:\\.\\d+)+[.)]?\\s+.*");
-    private static final Pattern TABLE_ROW = Pattern.compile(
-            "^(?:.*\\|.*|\\d+\\s+to\\s+\\d+\\s+.*|(?:Below|Absent)\\b.*)$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CLAUSE_START = Pattern.compile(
+            "^(?:\\d+(?:\\.\\d+)+[.)]?|\\([a-z]\\))\\s+[A-Z].*");
+    private static final Pattern TABLE_ROW = Pattern.compile("^.*\\|.*$");
 
     private final int maxCharacters;
     private final int overlapCharacters;
+    private final int targetMinCharacters;
+    private final int targetMaxCharacters;
 
+    @Autowired
     public Chunker(
             @Value("${edutrust.chunking.max-chars}") int maxCharacters,
-            @Value("${edutrust.chunking.overlap-chars}") int overlapCharacters) {
-        if (maxCharacters <= 0 || overlapCharacters < 0 || overlapCharacters >= maxCharacters) {
-            throw new IllegalArgumentException("Chunk size must be positive and overlap must be smaller than chunk size");
+            @Value("${edutrust.chunking.overlap-chars}") int overlapCharacters,
+            @Value("${edutrust.chunking.target-min-chars}") int targetMinCharacters,
+            @Value("${edutrust.chunking.target-max-chars}") int targetMaxCharacters) {
+        if (maxCharacters <= 0 || overlapCharacters < 0 || overlapCharacters >= maxCharacters
+                || targetMinCharacters < 0 || targetMaxCharacters <= 0
+                || targetMaxCharacters > maxCharacters || targetMinCharacters > targetMaxCharacters) {
+            throw new IllegalArgumentException("Invalid chunk size, overlap, or target range");
         }
         this.maxCharacters = maxCharacters;
         this.overlapCharacters = overlapCharacters;
+        this.targetMinCharacters = targetMinCharacters;
+        this.targetMaxCharacters = targetMaxCharacters;
+    }
+
+    public Chunker(int maxCharacters, int overlapCharacters) {
+        this(maxCharacters, overlapCharacters, 0, maxCharacters);
     }
 
     public List<Chunk> chunk(List<PdfPage> pages) {
@@ -58,102 +72,110 @@ public class Chunker {
     }
 
     private void chunkPage(PdfPage page, List<Chunk> chunks) {
-        String currentHeading = "";
-        StringBuilder pendingText = new StringBuilder();
-        boolean pendingClause = false;
-        List<String> lines = page.text().lines().toList();
+        String heading = "";
+        List<String> clauses = new ArrayList<>();
+        List<String> lines = page.text().lines().map(String::trim).filter(line -> !line.isBlank()).toList();
 
-        for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
-            String line = lines.get(lineIndex).trim();
-            if (line.isBlank()) {
-                continue;
-            }
-
+        for (int index = 0; index < lines.size(); index++) {
+            String line = lines.get(index);
             if (isSectionHeading(line)) {
-                chunks.addAll(flush(page.pageNumber(), currentHeading, pendingText, pendingClause));
-                pendingText.setLength(0);
-                currentHeading = line;
-                pendingClause = false;
+                if (!heading.isBlank()) {
+                    chunks.addAll(splitClauses(page.pageNumber(), heading, clauses));
+                    clauses.clear();
+                }
+                heading = line;
                 continue;
             }
-
-            if (isTableHeading(lines, lineIndex)) {
-                chunks.addAll(flush(page.pageNumber(), currentHeading, pendingText, pendingClause));
-                pendingText.setLength(0);
-                StringBuilder table = new StringBuilder(line);
-                lineIndex++;
-                while (lineIndex < lines.size() && isTableRow(lines.get(lineIndex).trim())) {
-                    table.append('\n').append(lines.get(lineIndex).trim());
-                    lineIndex++;
+            if (isTableStart(lines, index) && (!heading.isBlank() || clauses.isEmpty())) {
+                if (heading.isBlank() && !clauses.isEmpty()) {
+                    heading = clauses.removeFirst();
                 }
-                lineIndex--;
-                chunks.addAll(addUnit(page.pageNumber(), currentHeading, table.toString(), false, true));
+                chunks.addAll(splitClauses(page.pageNumber(), heading, clauses));
+                clauses.clear();
+                List<String> tableLines = new ArrayList<>();
+                tableLines.add(line);
+                index++;
+                while (index < lines.size() && isTableRow(lines.get(index))) {
+                    tableLines.add(lines.get(index));
+                    index++;
+                }
+                index--;
+                chunks.addAll(splitTable(page.pageNumber(), heading, tableLines));
                 continue;
             }
-
-            if (isNumberedClause(line)) {
-                if (pendingText.length() > 0 && !fits(currentHeading, pendingText + "\n" + line)) {
-                    chunks.addAll(flush(page.pageNumber(), currentHeading, pendingText, pendingClause));
-                    pendingClause = false;
-                }
-                pendingClause = true;
+            if (startsClause(line)) {
+                clauses.add(line);
+            } else if (!clauses.isEmpty()) {
+                int last = clauses.size() - 1;
+                clauses.set(last, clauses.get(last) + " " + line);
+            } else if (heading.isBlank()) {
+                clauses.add(line);
             }
-
-            if (pendingText.length() > 0) {
-                pendingText.append('\n');
-            }
-            pendingText.append(line);
         }
-        chunks.addAll(flush(page.pageNumber(), currentHeading, pendingText, pendingClause));
+        if (heading.isBlank() && !clauses.isEmpty()) {
+            heading = clauses.removeFirst();
+        }
+        chunks.addAll(splitClauses(page.pageNumber(), heading, clauses));
     }
 
-    private List<Chunk> flush(int pageNumber, String heading, StringBuilder text, boolean clause) {
-        if (text.isEmpty()) {
+    private List<Chunk> splitClauses(int pageNumber, String heading, List<String> clauses) {
+        if (clauses.isEmpty()) {
             return List.of();
         }
-        List<Chunk> result = addUnit(pageNumber, heading, text.toString(), clause, false);
-        text.setLength(0);
+        List<Chunk> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String clause : clauses) {
+            if (clause.length() + heading.length() + 1 > maxCharacters) {
+                flushClauseGroup(pageNumber, heading, current, result);
+                current.setLength(0);
+                result.addAll(splitLongClause(pageNumber, heading, clause));
+                continue;
+            }
+            int candidateLength = heading.length() + 1 + current.length()
+                    + (current.isEmpty() ? 0 : 1) + clause.length();
+            if (!current.isEmpty() && candidateLength > targetMaxCharacters) {
+                flushClauseGroup(pageNumber, heading, current, result);
+                current.setLength(0);
+            }
+            if (!current.isEmpty()) {
+                current.append('\n');
+            }
+            current.append(clause);
+        }
+        flushClauseGroup(pageNumber, heading, current, result);
         return result;
     }
 
-    private List<Chunk> addUnit(int pageNumber, String heading, String text, boolean clause, boolean table) {
-        String prefix = heading.isBlank() ? "" : heading + "\n";
-        int contentCapacity = maxCharacters - prefix.length();
-        if (prefix.length() >= maxCharacters) {
-            throw new IllegalArgumentException("Section heading is longer than the configured chunk size");
+    private void flushClauseGroup(int pageNumber, String heading, StringBuilder current, List<Chunk> result) {
+        if (!current.isEmpty()) {
+            result.add(new Chunk(-1, pageNumber, withHeading(heading, current.toString())));
         }
-
-        if (prefix.length() + text.length() <= maxCharacters) {
-            return List.of(new Chunk(-1, pageNumber, prefix + text));
-        }
-
-        if (table) {
-            return splitTable(pageNumber, heading, text, contentCapacity);
-        }
-        return splitText(pageNumber, heading, text, contentCapacity, clause);
     }
 
-    private List<Chunk> splitText(int pageNumber, String heading, String text, int contentCapacity, boolean clause) {
+    private List<Chunk> splitLongClause(int pageNumber, String heading, String clause) {
         List<Chunk> result = new ArrayList<>();
         int start = 0;
-        while (start < text.length()) {
-            int end = Math.min(text.length(), start + contentCapacity);
-            if (end < text.length()) {
-                int boundary = text.lastIndexOf(' ', end);
-                if (boundary > start) {
-                    end = boundary;
+        while (start < clause.length()) {
+            int capacity = maxCharacters - heading.length() - 1;
+            int end = Math.min(clause.length(), start + capacity);
+            if (end < clause.length()) {
+                int sentenceEnd = clause.lastIndexOf(". ", end);
+                if (sentenceEnd < start) {
+                    throw new IllegalArgumentException("A clause has no sentence boundary within the chunk limit");
                 }
+                end = sentenceEnd + 1;
             }
-            String piece = text.substring(start, end).trim();
+            String piece = clause.substring(start, end).trim();
             result.add(new Chunk(-1, pageNumber, withHeading(heading, piece)));
-            if (end == text.length()) {
+            if (end == clause.length()) {
                 break;
             }
             int nextStart = end;
-            if (clause) {
+            if (overlapCharacters > 0) {
                 nextStart = Math.max(start + 1, end - overlapCharacters);
-                while (nextStart < text.length() && text.charAt(nextStart) == ' ') {
-                    nextStart++;
+                int sentenceStart = clause.lastIndexOf(". ", nextStart);
+                if (sentenceStart >= start) {
+                    nextStart = sentenceStart + 2;
                 }
             }
             start = nextStart;
@@ -161,60 +183,49 @@ public class Chunker {
         return result;
     }
 
-    private List<Chunk> splitTable(int pageNumber, String heading, String text, int contentCapacity) {
-        List<Chunk> result = new ArrayList<>();
-        String[] rows = text.split("\\R");
-        String tableHeading = rows[0];
-        String tableHeader = rows.length > 1 ? rows[1] : "";
-        StringBuilder current = new StringBuilder(tableHeading);
-        if (!tableHeader.isBlank()) {
-            current.append('\n').append(tableHeader);
+    private List<Chunk> splitTable(int pageNumber, String heading, List<String> lines) {
+        if (lines.size() < 2) {
+            return List.of(new Chunk(-1, pageNumber, withHeading(heading, lines.getFirst())));
         }
-        for (int rowIndex = 2; rowIndex < rows.length; rowIndex++) {
-            String candidate = current + "\n" + rows[rowIndex];
-            if (candidate.length() > contentCapacity && current.length() > tableHeading.length() + tableHeader.length()) {
+        String title = lines.getFirst();
+        String header = lines.get(1);
+        String tablePrefix = title + "\n" + header;
+        int capacity = maxCharacters - heading.length() - 1;
+        if (tablePrefix.length() > capacity) {
+            throw new IllegalArgumentException("Table title and header exceed the configured chunk size");
+        }
+        List<Chunk> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder(tablePrefix);
+        for (int index = 2; index < lines.size(); index++) {
+            String candidate = current + "\n" + lines.get(index);
+            if (candidate.length() > capacity && current.length() > tablePrefix.length()) {
                 result.add(new Chunk(-1, pageNumber, withHeading(heading, current.toString())));
-                current = new StringBuilder(tableHeading).append('\n').append(tableHeader)
-                        .append('\n').append(rows[rowIndex]);
+                current = new StringBuilder(tablePrefix).append('\n').append(lines.get(index));
             } else {
                 current = new StringBuilder(candidate);
             }
-        }
-        if (current.length() > contentCapacity) {
-            throw new IllegalArgumentException("A table row is longer than the configured chunk size");
         }
         result.add(new Chunk(-1, pageNumber, withHeading(heading, current.toString())));
         return result;
     }
 
-    private String withHeading(String heading, String text) {
-        return heading.isBlank() ? text : heading + "\n" + text;
-    }
-
-    private boolean fits(String heading, String text) {
-        return withHeading(heading, text).length() <= maxCharacters;
-    }
-
-    private boolean isSectionHeading(String line) {
-        return SECTION_HEADING.matcher(line).matches() && !isNumberedClause(line);
-    }
-
-    private boolean isNumberedClause(String line) {
-        return NUMBERED_CLAUSE.matcher(line).matches();
-    }
-
-    private boolean isTableHeading(List<String> lines, int index) {
-        if (index + 1 >= lines.size() || isSectionHeading(lines.get(index)) || isNumberedClause(lines.get(index))) {
-            return index + 1 < lines.size() && isTableRow(lines.get(index + 1).trim())
-                    && !isSectionHeading(lines.get(index));
-        }
-        String line = lines.get(index).trim();
-        String nextLine = lines.get(index + 1).trim();
-        return isTableRow(nextLine) && (!isTableRow(line)
-                || line.toLowerCase().contains("grade") || line.toLowerCase().contains("amount"));
+    private boolean isTableStart(List<String> lines, int index) {
+        return index + 1 < lines.size() && isTableRow(lines.get(index + 1));
     }
 
     private boolean isTableRow(String line) {
         return TABLE_ROW.matcher(line).matches();
+    }
+
+    private boolean isSectionHeading(String line) {
+        return SECTION_HEADING.matcher(line).matches() && !startsClause(line);
+    }
+
+    private boolean startsClause(String line) {
+        return CLAUSE_START.matcher(line).matches();
+    }
+
+    private String withHeading(String heading, String text) {
+        return heading.isBlank() ? text : heading + "\n" + text;
     }
 }

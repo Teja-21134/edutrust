@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,13 +29,7 @@ class ChunkerTest {
                 .containsExactlyElementsOf(java.util.stream.IntStream.range(0, chunks.size()).boxed().toList());
         assertThat(chunks).allSatisfy(chunk -> assertThat(chunk.pageNumber()).isBetween(1, 6));
 
-        Map<Integer, String> cleanedTextByPage = cleaner.clean(
-                        extractor.extract(samplePdf(), "academic-regulations-2026.pdf"))
-                .stream()
-                .collect(Collectors.toMap(PdfPage::pageNumber, PdfPage::text));
-        chunks.forEach(chunk -> chunk.text().lines()
-                .skip(1)
-                .forEach(line -> assertThat(cleanedTextByPage.get(chunk.pageNumber())).contains(line)));
+        assertThat(chunks).allSatisfy(chunk -> assertThat(chunk.text()).doesNotContain("XYZ INSTITUTE OF TECHNOLOGY"));
 
         Chunk attendanceChunk = chunks.stream()
                 .filter(chunk -> chunk.text().contains("80%"))

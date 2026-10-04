@@ -27,6 +27,7 @@ app:
       average-char-tolerance: ${INGESTION_PDF_AVERAGE_CHAR_TOLERANCE:0.25}
       column-gap-points: ${INGESTION_PDF_COLUMN_GAP_POINTS:8}
       line-y-tolerance-points: ${INGESTION_PDF_LINE_Y_TOLERANCE_POINTS:2.5}
+      header-footer-margin-mm: ${INGESTION_PDF_HEADER_FOOTER_MARGIN_MM:20}
   jwt:
     secret: ${JWT_SECRET:edutrust-development-secret-change-me-2026}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
@@ -46,6 +47,8 @@ edutrust:
   chunking:
     max-chars: ${EDUTRUST_CHUNKING_MAX_CHARS:800}
     overlap-chars: ${EDUTRUST_CHUNKING_OVERLAP_CHARS:100}
+    target-min-chars: ${EDUTRUST_CHUNKING_TARGET_MIN_CHARS:300}
+    target-max-chars: ${EDUTRUST_CHUNKING_TARGET_MAX_CHARS:500}
   retrieval:
     top-k: ${EDUTRUST_RETRIEVAL_TOP_K:5}
   llm:
