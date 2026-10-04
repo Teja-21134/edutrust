@@ -99,7 +99,7 @@ def read_results(path: Path) -> list[dict[str, str]]:
 def write_results(path: Path, rows: list[dict[str, str]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_suffix(path.suffix + ".tmp")
-    with temporary_path.open("w", encoding="utf-8", newline="") as stream:
+    with temporary_path.open("w", encoding="utf-8-sig", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=RESULT_COLUMNS, extrasaction="ignore")
         writer.writeheader()
         writer.writerows({column: row.get(column, "") for column in RESULT_COLUMNS} for row in rows)
