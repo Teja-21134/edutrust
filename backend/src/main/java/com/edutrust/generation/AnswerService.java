@@ -9,6 +9,8 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.output.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,6 +21,8 @@ import java.util.List;
 /** Builds the evidence prompt and delegates answer generation to Ollama. */
 @Service
 public class AnswerService {
+
+    private static final Logger log = LoggerFactory.getLogger(AnswerService.class);
 
     public static final String NOT_FOUND_ANSWER =
             "I could not find this information in the available documents.";
@@ -41,9 +45,11 @@ public class AnswerService {
         String prompt = promptTemplate
                 .replace("{{question}}", question)
                 .replace("{{evidence}}", evidence);
+        String userInstruction = "Answer the question using the provided evidence.";
+        log.debug("Full prompt sent to model:\nSystem:\n{}\nUser:\n{}", prompt, userInstruction);
         Response<AiMessage> response = chatModel.generate(List.of(
                 SystemMessage.from(prompt),
-                UserMessage.from("Answer the question using the provided evidence.")));
+                UserMessage.from(userInstruction)));
         return response.content().text().trim();
     }
 
