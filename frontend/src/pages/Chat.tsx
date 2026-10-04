@@ -13,6 +13,11 @@ interface ChatProps {
   onAsk?: (question: string) => void;
   onLogout?: () => void;
   user?: AuthUser | null;
+  question?: string;
+  answer?: string;
+  sources?: { documentTitle: string; pageNumber: number }[];
+  timeMs?: number | null;
+  errorMessage?: string;
 }
 
 function SuggestionCard({ text, onClick }: { text: string; onClick?: () => void }) {
@@ -81,7 +86,7 @@ function TypingIndicator() {
   );
 }
 
-function AnswerBubble() {
+function AnswerBubble({ answer, sources, timeMs }: { answer: string; sources: { documentTitle: string; pageNumber: number }[]; timeMs?: number | null }) {
   return (
     <div className="flex items-start gap-3">
       <ShieldCheckAvatar />
@@ -95,9 +100,7 @@ function AnswerBubble() {
         }}
       >
         <p className="text-sm leading-relaxed" style={{ color: "#0F172A" }}>
-          A student must maintain a minimum of{" "}
-          <strong>75% attendance</strong> in each semester to be eligible to
-          appear for the semester-end examinations.
+          {answer}
         </p>
 
         <hr className="my-3" style={{ borderColor: "#E2E8F0" }} />
@@ -106,9 +109,10 @@ function AnswerBubble() {
           <span className="text-xs font-medium" style={{ color: "#64748B" }}>
             Sources
           </span>
-          <SourceChip text="Academic Regulations 2025 · Page 12" />
-          <SourceChip text="Leave and Condonation Policy · Page 3" />
+          {sources.map((source) => <SourceChip key={`${source.documentTitle}-${source.pageNumber}`} text={`${source.documentTitle} - Page ${source.pageNumber}`} />)}
         </div>
+
+        {timeMs !== null && timeMs !== undefined && <p className="text-xs" style={{ color: "#94A3B8" }}>{timeMs} ms</p>}
 
         {/* Reserved area for future: verification badge / confidence score */}
         <div
@@ -158,7 +162,7 @@ function NoAnswerBubble() {
   );
 }
 
-function ErrorBubble({ onRetry }: { onRetry?: () => void }) {
+function ErrorBubble({ onRetry, message }: { onRetry?: () => void; message?: string }) {
   return (
     <div className="flex items-start gap-3">
       <div
@@ -176,7 +180,7 @@ function ErrorBubble({ onRetry }: { onRetry?: () => void }) {
         }}
       >
         <p className="text-sm" style={{ color: "#DC2626" }}>
-          Something went wrong while getting your answer. Please try again.
+          {message || "Something went wrong while getting your answer. Please try again."}
         </p>
         <Button variant="secondary" size="sm" onClick={onRetry}>
           Retry
@@ -216,6 +220,7 @@ function ChatInput({ value = "", onChange, onAsk }: { value?: string; onChange?:
       <button
         className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
         style={{ backgroundColor: "#1E3A8A" }}
+        onClick={() => onAsk?.(value)}
       >
         <Send size={16} color="white" />
       </button>
@@ -223,7 +228,7 @@ function ChatInput({ value = "", onChange, onAsk }: { value?: string; onChange?:
   );
 }
 
-export default function Chat({ state = "empty", inputValue = "", onInputChange, onAsk, onLogout, user }: ChatProps) {
+export default function Chat({ state = "empty", question = "", answer = "", sources = [], timeMs, errorMessage, inputValue = "", onInputChange, onAsk, onLogout, user }: ChatProps) {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F8FAFC" }}>
       <Navbar
@@ -265,7 +270,7 @@ export default function Chat({ state = "empty", inputValue = "", onInputChange, 
             {/* LOADING state */}
             {state === "loading" && (
               <>
-                <UserBubble text="What is the minimum attendance required?" />
+                <UserBubble text={question} />
                 <TypingIndicator />
               </>
             )}
@@ -273,15 +278,15 @@ export default function Chat({ state = "empty", inputValue = "", onInputChange, 
             {/* ANSWER state */}
             {state === "answer" && (
               <>
-                <UserBubble text="What is the minimum attendance required?" />
-                <AnswerBubble />
+                <UserBubble text={question} />
+                <AnswerBubble answer={answer} sources={sources} timeMs={timeMs} />
               </>
             )}
 
             {/* NO ANSWER state */}
             {state === "noAnswer" && (
               <>
-                <UserBubble text="What is the tuition waiver criteria for sports quota?" />
+                <UserBubble text={question} />
                 <NoAnswerBubble />
               </>
             )}
@@ -289,8 +294,8 @@ export default function Chat({ state = "empty", inputValue = "", onInputChange, 
             {/* ERROR state */}
             {state === "error" && (
               <>
-                <UserBubble text="What is the minimum attendance required?" />
-                <ErrorBubble />
+                <UserBubble text={question} />
+                <ErrorBubble message={errorMessage} onRetry={() => onAsk?.(question)} />
               </>
             )}
 

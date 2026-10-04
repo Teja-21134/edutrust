@@ -13,7 +13,7 @@ export default function LoginPage() {
     setState("loading");
     const result = await login(email, password);
     if (!result.ok) { setState("error"); return; }
-    navigate(email.toLowerCase().includes("admin") ? "/upload" : "/chat", { replace: true });
+    navigate(result.user?.role === "ADMIN" ? "/upload" : "/chat", { replace: true });
   }
 
   return <Login state={state} onLogin={handleLogin} />;

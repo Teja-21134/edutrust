@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,6 +52,20 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.token", not(isEmptyOrNullString())))
                 .andExpect(jsonPath("$.email").value(adminEmail))
                 .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    void loginPreflightFromFrontendPort8443Succeeds() throws Exception {
+        mockMvc.perform(options("/api/auth/login")
+                        .header("Origin", "http://localhost:8443")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Authorization, Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:8443"))
+                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("POST")))
+                .andExpect(header().string("Access-Control-Allow-Headers", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("Authorization"),
+                        org.hamcrest.Matchers.containsString("Content-Type"))));
     }
 
     @Test

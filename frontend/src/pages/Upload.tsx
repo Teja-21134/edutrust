@@ -18,16 +18,6 @@ interface UploadProps {
   onNavigate?: (page: string) => void;
 }
 
-const sampleData = {
-  title: "Academic Regulations 2025",
-  department: "CSE",
-  docType: "Regulations",
-  year: "2025-26",
-  version: "v2",
-  date: "2025-08-15",
-  authority: "Principal",
-};
-
 export default function Upload({ state = "empty", onNavigate }: UploadProps) {
   const isDisabled = state === "uploading" || state === "success";
   const fieldOpacity = isDisabled ? 0.5 : 1;
@@ -88,7 +78,7 @@ export default function Upload({ state = "empty", onNavigate }: UploadProps) {
                 <Input
                   label="Document Title"
                   placeholder="e.g., Academic Regulations 2025"
-                  defaultValue={state !== "empty" && state !== "error" ? sampleData.title : ""}
+                  defaultValue=""
                   readOnly={isDisabled}
                 />
               </div>
@@ -96,7 +86,7 @@ export default function Upload({ state = "empty", onNavigate }: UploadProps) {
               {/* Department */}
               <Select
                 label="Department"
-                defaultValue={state !== "empty" && state !== "error" ? sampleData.department : ""}
+                defaultValue=""
                 onChange={() => {}}
               >
                 <option value="">All Departments</option>
@@ -110,7 +100,7 @@ export default function Upload({ state = "empty", onNavigate }: UploadProps) {
               {/* Document type */}
               <Select
                 label="Document Type"
-                defaultValue={state !== "empty" && state !== "error" ? sampleData.docType : ""}
+                defaultValue=""
                 onChange={() => {}}
               >
                 <option value="">Select type...</option>
@@ -125,7 +115,7 @@ export default function Upload({ state = "empty", onNavigate }: UploadProps) {
               {/* Academic year */}
               <Select
                 label="Academic Year"
-                defaultValue={state !== "empty" && state !== "error" ? sampleData.year : ""}
+                defaultValue=""
                 onChange={() => {}}
               >
                 <option value="">Select year...</option>
@@ -139,21 +129,21 @@ export default function Upload({ state = "empty", onNavigate }: UploadProps) {
               <Input
                 label="Version"
                 placeholder="e.g., v2"
-                defaultValue={state !== "empty" && state !== "error" ? sampleData.version : ""}
+                defaultValue=""
                 readOnly={isDisabled}
               />
 
               {/* Document date */}
               <DatePicker
                 label="Document Date"
-                defaultValue={state !== "empty" && state !== "error" ? sampleData.date : ""}
+                defaultValue=""
               />
 
               {/* Issuing authority */}
               <Select
                 label="Issuing Authority"
                 optional
-                defaultValue={state !== "empty" && state !== "error" ? sampleData.authority : ""}
+                defaultValue=""
                 onChange={() => {}}
               >
                 <option value="">Select authority...</option>
