@@ -22,3 +22,7 @@ Read `PLAN.md` before doing anything. It defines three reviews. Only implement t
 - Reranker: Python FastAPI microservice with BAAI/bge-reranker-base
 - Frontend: React (Vite) + Tailwind CSS + Axios
 - Tests: JUnit 5, Spring Boot Test; Python: pytest
+## Working style
+- Final message at most 8 lines. Run tests yourself and fix failures. Do not paste long logs.
+- Open only the files you need. No refactors outside the task.
+- Only the Flyway migration named in the task may be added.
