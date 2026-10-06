@@ -20,3 +20,5 @@ application-local.yml
 models/
 # DB data
 pgdata/
+
+backup/
