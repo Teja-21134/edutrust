@@ -77,9 +77,7 @@ public class AskService {
         Instant generationStarted = Instant.now();
         String answer;
         try {
-            if (v3 && resolution.conflictDetected() && evidence.isEmpty()) {
-                answer = "The available documents contain conflicting information. Please verify with the concerned department.";
-            } else if (v3 && evidence.isEmpty()) {
+            if (v3 && evidence.isEmpty()) {
                 answer = AnswerService.NOT_FOUND_ANSWER;
             } else {
                 answer = v3

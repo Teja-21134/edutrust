@@ -16,7 +16,11 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 /** Builds the evidence prompt and delegates answer generation to Ollama. */
 @Service
@@ -44,26 +48,24 @@ public class AnswerService {
         return answer(question, hits, null);
     }
 
-    /** Generates a V3 answer with explicit conflict-resolution context. */
+    /** Generates an answer from the selected document evidence only. */
     public String answer(String question, List<SearchService.SearchHit> hits,
                          ConflictResolutionService.Resolution resolution) {
         String evidence = buildEvidence(hits);
         String prompt = promptTemplate
                 .replace("{{question}}", question)
                 .replace("{{evidence}}", evidence);
-        String userInstruction = resolution == null
-                ? "Answer the question using the provided evidence."
-                : "Answer using only the selected evidence below. Conflict resolution is "
-                + resolution.resolution() + ". The selected document " + resolution.selectedDocument()
-                + " (version " + resolution.selectedVersion() + ") is authoritative for this answer. "
-                + "If another department document disagrees, follow the selected overriding evidence. "
-                + "Do not return the not-found sentence when the selected evidence contains a factual answer.";
+        String userInstruction = "Answer only from the supplied document evidence. "
+                + "Do not use retrieval, ranking, conflict-resolution, document-selection, version, score, "
+                + "or pipeline metadata as facts, and do not mention those internal details. "
+                + "If the evidence does not directly contain the requested information, return exactly: "
+                + NOT_FOUND_ANSWER;
         log.debug("Full prompt sent to model:\nSystem:\n{}\nUser:\n{}", prompt, userInstruction);
         String answer = chatModel.generate(List.of(
                 SystemMessage.from(prompt),
                 UserMessage.from(userInstruction))).content().text().trim();
         if (resolution != null && NOT_FOUND_ANSWER.equalsIgnoreCase(answer)) {
-            String evidenceFallback = evidenceFallback(hits);
+            String evidenceFallback = evidenceFallback(question, hits);
             if (evidenceFallback != null) {
                 log.info("V3 generation returned not-found with supplied evidence; using evidence sentence fallback");
                 return evidenceFallback;
@@ -82,19 +84,26 @@ public class AnswerService {
         return String.join("\n\n", evidence);
     }
 
-    private String evidenceFallback(List<SearchService.SearchHit> hits) {
+    private String evidenceFallback(String question, List<SearchService.SearchHit> hits) {
+        Set<String> questionTerms = factualTerms(question);
         for (SearchService.SearchHit hit : hits) {
             for (String sentence : hit.text().split("(?<=[.!?])\\s+")) {
                 String normalized = sentence.trim();
-                String lower = normalized.toLowerCase();
                 if (!normalized.isBlank() && normalized.matches(".*\\d.*")
-                        && (lower.contains("attendance") || lower.contains("on-duty")
-                        || lower.contains("credit") || lower.contains("fee"))) {
+                        && questionTerms.stream().anyMatch(normalized.toLowerCase(Locale.ROOT)::contains)) {
                     return normalized;
                 }
             }
         }
         return null;
+    }
+
+    private Set<String> factualTerms(String question) {
+        Set<String> terms = new HashSet<>();
+        Arrays.stream((question == null ? "" : question.toLowerCase(Locale.ROOT)).split("\\W+"))
+                .filter(term -> term.length() > 2)
+                .forEach(term -> terms.add(term.endsWith("s") ? term.substring(0, term.length() - 1) : term));
+        return terms;
     }
 
     private static String loadPromptTemplate() {

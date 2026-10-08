@@ -32,7 +32,7 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isLoginRequest = error.config?.url?.includes("/api/auth/login");
+    const isLoginRequest = error.config?.url?.includes("/api/auth/login") || error.config?.url?.includes("/api/auth/email");
     if (error.response?.status === 401 && !isLoginRequest) unauthorizedHandler?.();
     return Promise.reject(error);
   },
@@ -48,6 +48,17 @@ export async function login(email, password) {
     return { ok: true, user: { token: data.token, name: data.name, email: data.email, role: data.role } };
   } catch (error) {
     if (error.response?.status === 401) return { ok: false, message: "Invalid email or password" };
+    throw error;
+  }
+}
+
+export async function emailLogin(email) {
+  try {
+    const { data } = await apiClient.post("/api/auth/email", { email });
+    return { ok: true, user: { token: data.token, name: data.name, email: data.email, role: data.role } };
+  } catch (error) {
+    if (error.response?.status === 400) return { ok: false, message: "Please enter a valid email address" };
+    if (error.response?.status === 403) return { ok: false, message: "Please use administrator login for this account" };
     throw error;
   }
 }
@@ -89,6 +100,30 @@ export async function askQuestion(question) {
     }
     throw error;
   }
+}
+
+export async function createConversation(title) {
+  const { data } = await apiClient.post("/api/conversations", title ? { title } : {});
+  return data;
+}
+
+export async function listConversations() {
+  const { data } = await apiClient.get("/api/conversations");
+  return data;
+}
+
+export async function getConversation(id) {
+  const { data } = await apiClient.get(`/api/conversations/${id}`);
+  return data;
+}
+
+export async function deleteConversation(id) {
+  await apiClient.delete(`/api/conversations/${id}`);
+}
+
+export async function sendConversationMessage(id, question) {
+  const { data } = await apiClient.post(`/api/conversations/${id}/messages`, { question }, { timeout: 300000 });
+  return data;
 }
 
 export function getApiErrorMessage(error, fallback) {

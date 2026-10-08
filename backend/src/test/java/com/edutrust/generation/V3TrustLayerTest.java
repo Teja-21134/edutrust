@@ -52,6 +52,34 @@ class V3TrustLayerTest {
     }
 
     @Test
+    void unrelatedRetrievedDocumentDoesNotCreateFalseFeeConflict() {
+        ConflictResolutionService service = new ConflictResolutionService(properties());
+        var result = service.resolve("What are the hostel fees?", List.of(
+                hit("2025-26", "Hostel fees are Rs. 50000 per academic year.", LocalDate.of(2025, 4, 1),
+                        "Fee Structure 2025-26", "Fee Structure"),
+                hit("2025-26", "The academic calendar runs from June to April with examinations in March.",
+                        LocalDate.of(2025, 6, 1), "Academic Calendar 2025-26", "Academic Calendar")));
+
+        assertThat(result.selectedDocument()).isEqualTo("Fee Structure 2025-26");
+        assertThat(result.conflictDetected()).isFalse();
+        assertThat(result.resolution()).isEqualTo("no_conflict");
+    }
+
+    @Test
+    void genuinelyConflictingFeesStillUseExistingDateRule() {
+        ConflictResolutionService service = new ConflictResolutionService(properties());
+        var result = service.resolve("What are the hostel fees?", List.of(
+                hit("2025", "Hostel fees are Rs. 50000 per academic year.", LocalDate.of(2025, 4, 1),
+                        "Fee Structure 2025", "Fee Structure"),
+                hit("2026", "Hostel fees are Rs. 60000 per academic year.", LocalDate.of(2026, 4, 1),
+                        "Fee Structure 2026", "Fee Structure")));
+
+        assertThat(result.selectedDocument()).isEqualTo("Fee Structure 2026");
+        assertThat(result.conflictDetected()).isTrue();
+        assertThat(result.resolution()).isEqualTo("later_date");
+    }
+
+    @Test
     void verifierDistinguishesSupportedUnsupportedAndMissingEvidence() {
         FaithfulnessVerifier verifier = new FaithfulnessVerifier(0.55);
         var evidence = List.of(hit("2026", "Students must maintain 80% attendance.", LocalDate.of(2026, 6, 15)));

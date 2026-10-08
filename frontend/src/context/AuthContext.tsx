@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getAuthStorageKey, login as loginRequest, setUnauthorizedHandler } from "../api/client";
+import { emailLogin as emailLoginRequest, getAuthStorageKey, login as loginRequest, setUnauthorizedHandler } from "../api/client";
 
 export type UserRole = "ADMIN" | "STUDENT";
 export interface AuthUser { token: string; email: string; name: string; role: UserRole; }
 interface AuthContextValue {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string; user?: AuthUser }>;
+  emailLogin: (email: string) => Promise<{ ok: boolean; message?: string; user?: AuthUser }>;
   logout: () => void;
 }
 
@@ -35,7 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.setItem(getAuthStorageKey(), JSON.stringify(result.user));
     return { ok: true, user: result.user };
   }
-  const value = useMemo(() => ({ user, login, logout }), [user]);
+  async function emailLogin(email: string) {
+    const result = await emailLoginRequest(email);
+    if (!result.ok || !result.user) return { ok: false, message: result.message };
+    setUser(result.user);
+    sessionStorage.setItem(getAuthStorageKey(), JSON.stringify(result.user));
+    return { ok: true, user: result.user };
+  }
+  const value = useMemo(() => ({ user, login, emailLogin, logout }), [user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

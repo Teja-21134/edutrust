@@ -20,6 +20,9 @@ import java.util.regex.Pattern;
 public class ConflictResolutionService {
 
     private static final Logger log = LoggerFactory.getLogger(ConflictResolutionService.class);
+    private static final Set<String> TOPIC_STOP_WORDS = Set.of(
+            "what", "when", "where", "which", "who", "how", "much", "many", "the", "are", "is",
+            "a", "an", "of", "for", "to", "in", "on", "under", "required", "please", "tell", "me");
     private static final Pattern FACT = Pattern.compile("\\d+(?:\\.\\d+)?\\s*%|(?:rs\\.?|₹)\\s*[\\d,]+|\\d{1,2}:\\d{2}", Pattern.CASE_INSENSITIVE);
 
     private final InstitutionProperties institutionProperties;
@@ -40,7 +43,11 @@ public class ConflictResolutionService {
             candidates = hits;
         }
 
-        List<SearchService.SearchHit> documents = distinctDocuments(candidates);
+        List<SearchService.SearchHit> relevantCandidates = topicRelevantCandidates(question, candidates);
+        List<SearchService.SearchHit> documents = distinctDocuments(relevantCandidates);
+        if (!documents.isEmpty()) {
+            candidates = relevantCandidates;
+        }
         boolean conflict = hasConflictingFacts(documents);
         if (!conflict) {
             SearchService.SearchHit selected = candidates.getFirst();
@@ -108,6 +115,36 @@ public class ConflictResolutionService {
         Set<Object> seen = new HashSet<>();
         for (SearchService.SearchHit hit : hits) if (seen.add(hit.documentId())) documents.add(hit);
         return documents;
+    }
+
+    private List<SearchService.SearchHit> topicRelevantCandidates(String question,
+                                                                    List<SearchService.SearchHit> hits) {
+        Set<String> topicTerms = topicTerms(question);
+        if (topicTerms.isEmpty()) return hits;
+        List<SearchService.SearchHit> relevant = hits.stream()
+                .filter(hit -> {
+                    String searchableText = String.join(" ",
+                            hit.text() == null ? "" : hit.text(),
+                            hit.documentTitle() == null ? "" : hit.documentTitle(),
+                            hit.docType() == null ? "" : hit.docType(),
+                            hit.department() == null ? "" : hit.department()).toLowerCase(Locale.ROOT);
+                    return topicTerms.stream().anyMatch(searchableText::contains);
+                })
+                .toList();
+        return relevant.isEmpty() ? hits : relevant;
+    }
+
+    private Set<String> topicTerms(String question) {
+        Set<String> terms = new HashSet<>();
+        var matcher = Pattern.compile("[a-zA-Z]{3,}").matcher(question == null ? "" : question.toLowerCase(Locale.ROOT));
+        while (matcher.find()) {
+            String term = matcher.group();
+            if (!TOPIC_STOP_WORDS.contains(term)) {
+                terms.add(term.endsWith("ies") ? term.substring(0, term.length() - 3) + "y"
+                        : term.endsWith("s") ? term.substring(0, term.length() - 1) : term);
+            }
+        }
+        return terms;
     }
 
     private boolean matchesYear(SearchService.SearchHit hit, int year) {

@@ -7,6 +7,8 @@ type LoginState = "default" | "error" | "loading";
 
 interface LoginProps {
   state?: LoginState;
+  mode?: "email" | "admin";
+  onModeChange?: (mode: "email" | "admin") => void;
   onLogin?: (email: string, password: string) => void;
 }
 
@@ -89,7 +91,7 @@ function FeaturePoint({ text }: { text: string }) {
   );
 }
 
-export default function Login({ state = "default", onLogin }: LoginProps) {
+export default function Login({ state = "default", mode = "email", onModeChange, onLogin }: LoginProps) {
   const [email, setEmail] = useState(state === "error" ? "wrong@example.com" : "");
   const [password, setPassword] = useState(state === "error" ? "wrongpass" : "");
 
@@ -159,17 +161,9 @@ export default function Login({ state = "default", onLogin }: LoginProps) {
               error={state === "error" ? "Invalid email or password" : undefined}
             />
 
-            <PasswordInput
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={state === "error" ? "Invalid email or password" : undefined}
-            />
+            {mode === "admin" && <PasswordInput label="Password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} error={state === "error" ? "Invalid email or password" : undefined} />}
 
-            {state === "error" && (
-              <Alert variant="error" message="Invalid email or password. Please check your credentials and try again." />
-            )}
+            {state === "error" && <Alert variant="error" message={mode === "email" ? "We could not sign you in. Please check your email and try again." : "Invalid email or password. Please check your credentials and try again."} />}
 
             <Button
               variant={state === "loading" ? "primary" : state === "default" || state === "error" ? "primary" : "primary"}
@@ -178,8 +172,11 @@ export default function Login({ state = "default", onLogin }: LoginProps) {
               className="w-full mt-1"
               onClick={() => onLogin?.(email, password)}
             >
-              Login
+              {mode === "email" ? "Continue with email" : "Admin login"}
             </Button>
+            <button type="button" className="text-sm font-medium text-blue-900 hover:underline" onClick={() => onModeChange?.(mode === "email" ? "admin" : "email")}>
+              {mode === "email" ? "Administrator login" : "Use normal user email login"}
+            </button>
           </div>
         </div>
 

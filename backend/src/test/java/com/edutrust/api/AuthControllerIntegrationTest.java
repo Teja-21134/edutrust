@@ -1,6 +1,9 @@
 package com.edutrust.api;
 
 import com.edutrust.IntegrationTestBase;
+import com.edutrust.database.UserRepository;
+import com.edutrust.database.UserRole;
+import com.edutrust.security.JwtService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.UUID;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,6 +36,12 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JwtService jwtService;
 
     @Value("${app.seed-users.admin-email}")
     private String adminEmail;
@@ -101,6 +113,71 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
                 .andExpect(jsonPath("$.role").value("STUDENT"));
     }
 
+    @Test
+    void validEmailLoginCreatesNormalizedStudentAndJwtIdentity() throws Exception {
+        String email = uniqueEmail();
+
+        JsonNode body = emailLogin("  " + email.toUpperCase() + "  ");
+
+        assertEquals(email, body.get("email").asText());
+        assertEquals("STUDENT", body.get("role").asText());
+        assertEquals(email, jwtService.parseToken(body.get("token").asText()).email());
+        assertEquals(UserRole.STUDENT, jwtService.parseToken(body.get("token").asText()).role());
+        assertEquals(1, userRepository.findByEmailIgnoreCase(email).stream()
+                .filter(user -> user.getRole() == UserRole.STUDENT).count());
+    }
+
+    @Test
+    void invalidEmailIsRejected() throws Exception {
+        mockMvc.perform(post("/api/auth/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void existingEmailAndRepeatedLoginReuseTheSameUser() throws Exception {
+        String email = uniqueEmail();
+
+        JsonNode first = emailLogin(email);
+        UUID firstId = userRepository.findByEmailIgnoreCase(email).orElseThrow().getId();
+        JsonNode second = emailLogin(email.toUpperCase());
+        UUID secondId = userRepository.findByEmailIgnoreCase(email).orElseThrow().getId();
+
+        assertEquals(firstId, secondId);
+        assertEquals(first.get("email").asText(), second.get("email").asText());
+        assertEquals(UserRole.STUDENT, jwtService.parseToken(second.get("token").asText()).role());
+        assertEquals(1, userRepository.findAll().stream()
+                .filter(user -> user.getEmail().equals(email)).count());
+    }
+
+    @Test
+    void passwordlessLoginCannotIssueAnAdminToken() throws Exception {
+        mockMvc.perform(post("/api/auth/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + adminEmail + "\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void passwordlessStudentCannotAccessAdminDocumentApis() throws Exception {
+        String token = emailLogin(uniqueEmail()).get("token").asText();
+
+        mockMvc.perform(get("/api/documents").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void protectedApisStillRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/me"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/api/conversations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
     private String tokenFor(String email, String password) throws Exception {
         String response = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -111,6 +188,22 @@ class AuthControllerIntegrationTest extends IntegrationTestBase {
                 .getContentAsString();
         JsonNode body = objectMapper.readTree(response);
         return body.get("token").asText();
+    }
+
+    private JsonNode emailLogin(String email) throws Exception {
+        String response = mockMvc.perform(post("/api/auth/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("STUDENT"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readTree(response);
+    }
+
+    private String uniqueEmail() {
+        return "email-login-" + UUID.randomUUID() + "@example.com";
     }
 
     private String loginJson(String email, String password) {

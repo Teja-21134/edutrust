@@ -4,17 +4,22 @@ import Login from "./Login";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, emailLogin } = useAuth();
   const navigate = useNavigate();
   const [state, setState] = useState<"default" | "error" | "loading">("default");
+  const [mode, setMode] = useState<"email" | "admin">("email");
 
   async function handleLogin(email: string, password: string, event?: FormEvent) {
     event?.preventDefault();
     setState("loading");
-    const result = await login(email, password);
-    if (!result.ok) { setState("error"); return; }
-    navigate(result.user?.role === "ADMIN" ? "/upload" : "/chat", { replace: true });
+    try {
+      const result = mode === "email" ? await emailLogin(email) : await login(email, password);
+      if (!result.ok) { setState("error"); return; }
+      navigate(result.user?.role === "ADMIN" ? "/upload" : "/chat", { replace: true });
+    } catch {
+      setState("error");
+    }
   }
 
-  return <Login state={state} onLogin={handleLogin} />;
+  return <Login state={state} mode={mode} onModeChange={(nextMode) => { setMode(nextMode); setState("default"); }} onLogin={handleLogin} />;
 }

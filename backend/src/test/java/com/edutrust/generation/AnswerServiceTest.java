@@ -46,4 +46,40 @@ class AnswerServiceTest {
         assertThat(prompt.indexOf("Students must maintain 80% attendance."))
                 .isLessThan(prompt.indexOf("Question:\nWhat attendance is required?"));
     }
+
+    @Test
+    void v3GenerationInstructionDoesNotTreatConflictMetadataAsEvidence() {
+        List<ChatMessage> sentMessages = new ArrayList<>();
+        ChatLanguageModel stubModel = messages -> {
+            sentMessages.addAll(messages);
+            return Response.from(AiMessage.from("80% attendance is required."));
+        };
+        AnswerService answerService = new AnswerService(stubModel);
+        SearchService.SearchHit hit = new SearchService.SearchHit(
+                UUID.randomUUID(), "Students must maintain 80% attendance.", 3,
+                UUID.randomUUID(), "Academic Regulations 2026", "All", "Regulations",
+                "2026-27", "v3", LocalDate.of(2026, 6, 15), 0.9123);
+        ConflictResolutionService.Resolution resolution = new ConflictResolutionService.Resolution(
+                List.of(hit), true, "later_date", "v3", "Academic Regulations 2026", "internal");
+
+        assertThat(answerService.answer("minimum attendance", List.of(hit), resolution))
+                .isEqualTo("80% attendance is required.");
+        String instruction = ((dev.langchain4j.data.message.UserMessage) sentMessages.get(1)).text();
+        assertThat(instruction).doesNotContain("later_date", "Academic Regulations 2026", "authoritative");
+    }
+
+    @Test
+    void genericEvidenceFallbackUsesQuestionTermsOnly() {
+        ChatLanguageModel stubModel = messages -> Response.from(AiMessage.from(AnswerService.NOT_FOUND_ANSWER));
+        AnswerService answerService = new AnswerService(stubModel);
+        SearchService.SearchHit hit = new SearchService.SearchHit(
+                UUID.randomUUID(), "The minimum attendance requirement is 80%.", 3,
+                UUID.randomUUID(), "Academic Regulations 2026", "All", "Regulations",
+                "2026-27", "v3", LocalDate.of(2026, 6, 15), 0.9123);
+        ConflictResolutionService.Resolution resolution = new ConflictResolutionService.Resolution(
+                List.of(hit), false, "no_conflict", "v3", "Academic Regulations 2026", "internal");
+
+        assertThat(answerService.answer("minimum attendance", List.of(hit), resolution))
+                .contains("minimum attendance requirement is 80%");
+    }
 }
