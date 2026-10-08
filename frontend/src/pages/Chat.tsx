@@ -1,23 +1,18 @@
+import { useEffect, useRef } from "react";
 import { Send, Copy, ThumbsUp, ThumbsDown, AlertTriangle, ShieldCheck } from "../components/icons";
 import Navbar from "../components/Navbar";
 import { Button, SourceChip, ShieldCheckAvatar, Alert } from "../components/ui";
 import type { AuthUser } from "../context/AuthContext";
-
-type ChatState = "empty" | "loading" | "answer" | "noAnswer" | "error";
+import type { ChatExchange } from "./ChatPage";
 
 interface ChatProps {
-  state?: ChatState;
+  messages?: ChatExchange[];
   onNavigate?: (page: string) => void;
   inputValue?: string;
   onInputChange?: (value: string) => void;
   onAsk?: (question: string) => void;
   onLogout?: () => void;
   user?: AuthUser | null;
-  question?: string;
-  answer?: string;
-  sources?: { documentTitle: string; pageNumber: number }[];
-  timeMs?: number | null;
-  errorMessage?: string;
 }
 
 function SuggestionCard({ text, onClick }: { text: string; onClick?: () => void }) {
@@ -228,7 +223,13 @@ function ChatInput({ value = "", onChange, onAsk }: { value?: string; onChange?:
   );
 }
 
-export default function Chat({ state = "empty", question = "", answer = "", sources = [], timeMs, errorMessage, inputValue = "", onInputChange, onAsk, onLogout, user }: ChatProps) {
+export default function Chat({ messages = [], inputValue = "", onInputChange, onAsk, onLogout, user }: ChatProps) {
+  const newestMessageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    newestMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
+
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#F8FAFC" }}>
       <Navbar
@@ -243,7 +244,7 @@ export default function Chat({ state = "empty", question = "", answer = "", sour
           <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col gap-6">
 
             {/* EMPTY state */}
-            {state === "empty" && (
+            {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 gap-8">
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -267,37 +268,16 @@ export default function Chat({ state = "empty", question = "", answer = "", sour
               </div>
             )}
 
-            {/* LOADING state */}
-            {state === "loading" && (
-              <>
-                <UserBubble text={question} />
-                <TypingIndicator />
-              </>
-            )}
-
-            {/* ANSWER state */}
-            {state === "answer" && (
-              <>
-                <UserBubble text={question} />
-                <AnswerBubble answer={answer} sources={sources} timeMs={timeMs} />
-              </>
-            )}
-
-            {/* NO ANSWER state */}
-            {state === "noAnswer" && (
-              <>
-                <UserBubble text={question} />
-                <NoAnswerBubble />
-              </>
-            )}
-
-            {/* ERROR state */}
-            {state === "error" && (
-              <>
-                <UserBubble text={question} />
-                <ErrorBubble message={errorMessage} onRetry={() => onAsk?.(question)} />
-              </>
-            )}
+            {messages.map((message) => (
+              <div key={message.id}>
+                <UserBubble text={message.question} />
+                {message.state === "loading" && <TypingIndicator />}
+                {message.state === "answer" && <AnswerBubble answer={message.answer ?? ""} sources={message.sources} timeMs={message.timeMs} />}
+                {message.state === "noAnswer" && <NoAnswerBubble />}
+                {message.state === "error" && <ErrorBubble message={message.errorMessage} onRetry={() => onAsk?.(message.question)} />}
+              </div>
+            ))}
+            <div ref={newestMessageRef} aria-hidden="true" />
 
           </div>
         </div>

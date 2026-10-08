@@ -1,0 +1,37 @@
+edutrust:
+  institution:
+    name: "XYZ Institute of Technology"
+    all-departments-label: "All"
+    departments:
+      - code: CSE
+        aliases: [cse, computer science]
+      - code: ECE
+        aliases: [ece, electronics and communication]
+      - code: EEE
+        aliases: [eee, electrical]
+      - code: ME
+        aliases: [me, mechanical]
+    document-types:
+      - name: Regulations
+        authority-rank: 3
+        keywords: [regulation, rules]
+      - name: Academic Calendar
+        authority-rank: 2
+        keywords: [calendar, schedule, dates]
+      - name: Fee Structure
+        authority-rank: 2
+        keywords: [fee, fees, tuition]
+      - name: Circular
+        authority-rank: 1
+        keywords: [circular, notice]
+    default-authority-rank: 1
+    latest-words: [latest, current, now, currently, present, new]
+    parity-terms:
+      odd: [odd]
+      even: [even]
+    override-phrases: [shall not grant, stands overridden, beyond the limits, supersede]
+    academic-year-pattern: "\\d{4}-\\d{2}"
+    messages:
+      not-found: "I could not find this information in the available documents."
+      conflict-unresolved: "The available documents contain conflicting information. Please verify with the concerned department."
+      unverified: "I could not verify this information from the available documents."

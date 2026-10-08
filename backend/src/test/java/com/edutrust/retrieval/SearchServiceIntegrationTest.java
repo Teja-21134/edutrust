@@ -50,15 +50,52 @@ class SearchServiceIntegrationTest extends IntegrationTestBase {
         assertThat(hits).allSatisfy(hit -> assertThat(hit.score()).isBetween(0.0, 1.0));
     }
 
+    @Test
+    void fullTextSearchFindsKeywordRelevantChunks() throws IOException {
+        ingestSample();
+
+        List<SearchService.SearchHit> hits = searchService.searchFullText(
+                "minimum attendance required for semester-end examinations");
+
+        assertThat(hits).isNotEmpty();
+        assertThat(hits).allSatisfy(hit -> assertThat(hit.text()).containsIgnoringCase("attendance"));
+        assertThat(hits).anySatisfy(hit -> assertThat(hit.pageNumber()).isEqualTo(3));
+    }
+
+    @Test
+    void hybridSearchReturnsAtMostFiveResultsAndKeepsUnversionedDocumentsSearchable() throws IOException {
+        ingestSample("academic-regulations-2026.pdf", "Search Test Academic Regulations 2026", "2026-27", "v3");
+
+        List<SearchService.SearchHit> hits = searchService.searchHybrid("minimum attendance required");
+
+        assertThat(hits).isNotEmpty().hasSizeLessThanOrEqualTo(5);
+        assertThat(hits).allSatisfy(hit -> assertThat(hit.fusedScore()).isPositive());
+    }
+
+    @Test
+    void hybridSearchPrefersExplicit2023Metadata() throws IOException {
+        ingestSample("academic-regulations-2023.pdf", "Search Test Academic Regulations 2023", "2023-24", "v1");
+        ingestSample("academic-regulations-2026.pdf", "Search Test Academic Regulations 2026", "2026-27", "v3");
+
+        List<SearchService.SearchHit> hits = searchService.searchHybrid(
+                "minimum attendance under Academic Regulations 2023");
+
+        assertThat(hits).isNotEmpty();
+        assertThat(hits).allSatisfy(hit -> assertThat(hit.academicYear()).contains("2023"));
+    }
+
     private UUID ingestSample() throws IOException {
-        byte[] pdf = Files.readAllBytes(new ClassPathResource(
-                "documents/academic-regulations-2026.pdf").getFile().toPath());
+        return ingestSample("academic-regulations-2026.pdf", "Search Test Academic Regulations 2026", "2026-27", "v3");
+    }
+
+    private UUID ingestSample(String fileName, String title, String academicYear, String version) throws IOException {
+        byte[] pdf = Files.readAllBytes(new ClassPathResource("documents/" + fileName).getFile().toPath());
         MockMultipartFile file = new MockMultipartFile(
-                "file", "academic-regulations-2026.pdf", "application/pdf", pdf);
+                "file", fileName, "application/pdf", pdf);
         IngestionService.IngestionResult result = ingestionService.ingest(file,
                 new IngestionService.DocumentMetadata(
-                        "Search Test Academic Regulations 2026", "All", "Regulations",
-                        "2026-27", "v3", LocalDate.of(2026, 6, 15), "Dean Academics"));
+                        title, "All", "Regulations", academicYear, version,
+                        LocalDate.of(Integer.parseInt(academicYear.substring(0, 4)), 6, 15), "Dean Academics"));
         return result.id();
     }
 }

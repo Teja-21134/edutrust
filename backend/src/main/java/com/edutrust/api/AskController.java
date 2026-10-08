@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,11 +28,19 @@ public class AskController {
     }
 
     @PostMapping
-    public AskService.AskResult ask(@RequestBody AskRequest request) {
+    public AskService.AskResult ask(
+            @RequestBody AskRequest request,
+            @RequestParam(value = "version", defaultValue = "v1") String version) {
         if (request == null || request.question() == null || request.question().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Question must not be empty");
         }
-        return askService.ask(request.question());
+        try {
+            return version.equalsIgnoreCase("v1")
+                    ? askService.ask(request.question())
+                    : askService.ask(request.question(), version);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+        }
     }
 
     @ExceptionHandler(AnswerServiceUnavailableException.class)

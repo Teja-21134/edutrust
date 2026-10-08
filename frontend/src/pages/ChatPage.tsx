@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Chat from "./Chat";
 import { askQuestion, getApiErrorMessage } from "../api/client";
@@ -6,29 +6,53 @@ import { useAuth } from "../context/AuthContext";
 
 type ChatState = "empty" | "loading" | "answer" | "noAnswer" | "error";
 
+export interface ChatExchange {
+  id: number;
+  question: string;
+  state: Exclude<ChatState, "empty">;
+  answer?: string;
+  sources: { documentTitle: string; pageNumber: number }[];
+  timeMs: number | null;
+  errorMessage?: string;
+  response?: Record<string, unknown>;
+}
+
 export default function ChatPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [state, setState] = useState<ChatState>("empty");
+  const nextMessageId = useRef(0);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState<{ documentTitle: string; pageNumber: number }[]>([]);
-  const [timeMs, setTimeMs] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [messages, setMessages] = useState<ChatExchange[]>([]);
 
   async function ask(value: string) {
     const trimmed = value.trim();
-    if (!trimmed || state === "loading") return;
-    setQuestion(trimmed); setState("loading"); setErrorMessage("");
+    if (!trimmed) return;
+
+    const id = nextMessageId.current++;
+    setQuestion("");
+    setMessages((current) => [...current, {
+      id,
+      question: trimmed,
+      state: "loading",
+      sources: [],
+      timeMs: null,
+    }]);
+
     try {
       const result = await askQuestion(trimmed);
-      setAnswer(result.answer); setSources(result.sources ?? []); setTimeMs(result.timeMs ?? null);
-      setState(result.answered ? "answer" : "noAnswer");
+      setMessages((current) => current.map((message) => message.id === id ? {
+        ...message,
+        state: result.answered ? "answer" : "noAnswer",
+        answer: result.answer,
+        sources: result.sources ?? [],
+        timeMs: result.timeMs ?? null,
+        response: result,
+      } : message));
     } catch (requestError) {
-      setErrorMessage(getApiErrorMessage(requestError, requestError instanceof Error ? requestError.message : "Something went wrong while getting your answer. Please try again."));
-      setState("error");
+      const errorMessage = getApiErrorMessage(requestError, requestError instanceof Error ? requestError.message : "Something went wrong while getting your answer. Please try again.");
+      setMessages((current) => current.map((message) => message.id === id ? { ...message, state: "error", errorMessage } : message));
     }
   }
 
-  return <Chat state={state} question={question} answer={answer} sources={sources} timeMs={timeMs} errorMessage={errorMessage} inputValue={question} onInputChange={setQuestion} onAsk={ask} onLogout={() => { logout(); navigate("/login"); }} user={user} />;
+  return <Chat messages={messages} inputValue={question} onInputChange={setQuestion} onAsk={ask} onLogout={() => { logout(); navigate("/login"); }} user={user} />;
 }

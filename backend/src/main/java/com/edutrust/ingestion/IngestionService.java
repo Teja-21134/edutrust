@@ -2,6 +2,8 @@ package com.edutrust.ingestion;
 
 import com.edutrust.database.ChunkRepository;
 import com.edutrust.database.Document;
+import com.edutrust.database.DocumentFamily;
+import com.edutrust.database.DocumentFamilyRepository;
 import com.edutrust.database.DocumentRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -22,6 +26,7 @@ import java.util.UUID;
 public class IngestionService {
 
     private final DocumentRepository documentRepository;
+    private final DocumentFamilyRepository documentFamilyRepository;
     private final ChunkRepository chunkRepository;
     private final JdbcTemplate jdbcTemplate;
     private final PdfTextExtractor extractor;
@@ -31,6 +36,7 @@ public class IngestionService {
 
     public IngestionService(
             DocumentRepository documentRepository,
+            DocumentFamilyRepository documentFamilyRepository,
             ChunkRepository chunkRepository,
             JdbcTemplate jdbcTemplate,
             PdfTextExtractor extractor,
@@ -38,6 +44,7 @@ public class IngestionService {
             Chunker chunker,
             EmbeddingService embeddingService) {
         this.documentRepository = documentRepository;
+        this.documentFamilyRepository = documentFamilyRepository;
         this.chunkRepository = chunkRepository;
         this.jdbcTemplate = jdbcTemplate;
         this.extractor = extractor;
@@ -49,14 +56,23 @@ public class IngestionService {
     @Transactional
     public IngestionResult ingest(MultipartFile file, DocumentMetadata metadata) throws IOException {
         Instant started = Instant.now();
+        String documentHash = sha256(file.getBytes());
+        documentRepository.findByDocumentHash(documentHash)
+                .ifPresent(existing -> {
+                    throw new DuplicateDocumentException(existing.getId());
+                });
+
         Document document = new Document(UUID.randomUUID(), metadata.title());
         document.setDepartment(metadata.department());
         document.setDocType(metadata.docType());
         document.setAcademicYear(metadata.academicYear());
         document.setVersion(metadata.version());
         document.setDocDate(metadata.docDate());
+        document.setEffectiveDate(metadata.effectiveDate());
         document.setAuthority(metadata.authority());
         document.setFileName(file.getOriginalFilename());
+        document.setDocumentHash(documentHash);
+        document.setFamily(resolveFamily(metadata));
         documentRepository.saveAndFlush(document);
 
         List<PdfPage> pages;
@@ -134,6 +150,40 @@ public class IngestionService {
         return literal.append(']').toString();
     }
 
+    private DocumentFamily resolveFamily(DocumentMetadata metadata) {
+        if (isBlank(metadata.institutionKey()) && isBlank(metadata.familyKey())
+                && isBlank(metadata.familyDisplayName())) {
+            return null;
+        }
+        if (isBlank(metadata.institutionKey()) || isBlank(metadata.familyKey())) {
+            throw new InvalidFamilyMetadataException();
+        }
+        String displayName = isBlank(metadata.familyDisplayName())
+                ? metadata.familyKey()
+                : metadata.familyDisplayName().trim();
+        return documentFamilyRepository.findByInstitutionKeyAndFamilyKey(
+                        metadata.institutionKey().trim(), metadata.familyKey().trim())
+                .orElseGet(() -> documentFamilyRepository.save(new DocumentFamily(
+                        UUID.randomUUID(), metadata.institutionKey().trim(), metadata.familyKey().trim(), displayName)));
+    }
+
+    private String sha256(byte[] bytes) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte value : digest) {
+                hex.append(String.format("%02x", value));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
     public record DocumentMetadata(
             String title,
             String department,
@@ -141,7 +191,23 @@ public class IngestionService {
             String academicYear,
             String version,
             LocalDate docDate,
-            String authority) {
+            String authority,
+            String institutionKey,
+            String familyKey,
+            String familyDisplayName,
+            LocalDate effectiveDate) {
+
+        public DocumentMetadata(
+                String title,
+                String department,
+                String docType,
+                String academicYear,
+                String version,
+                LocalDate docDate,
+                String authority) {
+            this(title, department, docType, academicYear, version, docDate, authority,
+                    null, null, null, null);
+        }
     }
 
     public record IngestionResult(UUID id, String title, int pages, int chunks) {
@@ -164,6 +230,20 @@ public class IngestionService {
     public static class DocumentNotFoundException extends RuntimeException {
         public DocumentNotFoundException(UUID documentId) {
             super("Document not found: " + documentId);
+        }
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public static class DuplicateDocumentException extends RuntimeException {
+        public DuplicateDocumentException(UUID documentId) {
+            super("The document already exists: " + documentId);
+        }
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public static class InvalidFamilyMetadataException extends RuntimeException {
+        public InvalidFamilyMetadataException() {
+            super("institutionKey and familyKey are both required when family metadata is supplied");
         }
     }
 }

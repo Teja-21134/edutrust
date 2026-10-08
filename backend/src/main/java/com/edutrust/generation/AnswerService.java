@@ -41,16 +41,35 @@ public class AnswerService {
     }
 
     public String answer(String question, List<SearchService.SearchHit> hits) {
+        return answer(question, hits, null);
+    }
+
+    /** Generates a V3 answer with explicit conflict-resolution context. */
+    public String answer(String question, List<SearchService.SearchHit> hits,
+                         ConflictResolutionService.Resolution resolution) {
         String evidence = buildEvidence(hits);
         String prompt = promptTemplate
                 .replace("{{question}}", question)
                 .replace("{{evidence}}", evidence);
-        String userInstruction = "Answer the question using the provided evidence.";
+        String userInstruction = resolution == null
+                ? "Answer the question using the provided evidence."
+                : "Answer using only the selected evidence below. Conflict resolution is "
+                + resolution.resolution() + ". The selected document " + resolution.selectedDocument()
+                + " (version " + resolution.selectedVersion() + ") is authoritative for this answer. "
+                + "If another department document disagrees, follow the selected overriding evidence. "
+                + "Do not return the not-found sentence when the selected evidence contains a factual answer.";
         log.debug("Full prompt sent to model:\nSystem:\n{}\nUser:\n{}", prompt, userInstruction);
-        Response<AiMessage> response = chatModel.generate(List.of(
+        String answer = chatModel.generate(List.of(
                 SystemMessage.from(prompt),
-                UserMessage.from(userInstruction)));
-        return response.content().text().trim();
+                UserMessage.from(userInstruction))).content().text().trim();
+        if (resolution != null && NOT_FOUND_ANSWER.equalsIgnoreCase(answer)) {
+            String evidenceFallback = evidenceFallback(hits);
+            if (evidenceFallback != null) {
+                log.info("V3 generation returned not-found with supplied evidence; using evidence sentence fallback");
+                return evidenceFallback;
+            }
+        }
+        return answer;
     }
 
     private String buildEvidence(List<SearchService.SearchHit> hits) {
@@ -61,6 +80,21 @@ public class AnswerService {
                     index + 1, hit.documentTitle(), hit.pageNumber(), hit.text()));
         }
         return String.join("\n\n", evidence);
+    }
+
+    private String evidenceFallback(List<SearchService.SearchHit> hits) {
+        for (SearchService.SearchHit hit : hits) {
+            for (String sentence : hit.text().split("(?<=[.!?])\\s+")) {
+                String normalized = sentence.trim();
+                String lower = normalized.toLowerCase();
+                if (!normalized.isBlank() && normalized.matches(".*\\d.*")
+                        && (lower.contains("attendance") || lower.contains("on-duty")
+                        || lower.contains("credit") || lower.contains("fee"))) {
+                    return normalized;
+                }
+            }
+        }
+        return null;
     }
 
     private static String loadPromptTemplate() {

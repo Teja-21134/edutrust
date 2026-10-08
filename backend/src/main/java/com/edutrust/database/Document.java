@@ -3,6 +3,8 @@ package com.edutrust.database;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
@@ -32,6 +34,16 @@ public class Document {
 
     @Column(name = "doc_date")
     private LocalDate docDate;
+
+    @ManyToOne
+    @JoinColumn(name = "family_id")
+    private DocumentFamily family;
+
+    @Column(name = "effective_date")
+    private LocalDate effectiveDate;
+
+    @Column(name = "document_hash", length = 64)
+    private String documentHash;
 
     private String authority;
 
@@ -102,6 +114,30 @@ public class Document {
 
     public void setDocDate(LocalDate docDate) {
         this.docDate = docDate;
+    }
+
+    public DocumentFamily getFamily() {
+        return family;
+    }
+
+    public void setFamily(DocumentFamily family) {
+        this.family = family;
+    }
+
+    public LocalDate getEffectiveDate() {
+        return effectiveDate;
+    }
+
+    public void setEffectiveDate(LocalDate effectiveDate) {
+        this.effectiveDate = effectiveDate;
+    }
+
+    public String getDocumentHash() {
+        return documentHash;
+    }
+
+    public void setDocumentHash(String documentHash) {
+        this.documentHash = documentHash;
     }
 
     public String getAuthority() {

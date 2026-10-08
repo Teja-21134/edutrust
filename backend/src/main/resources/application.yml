@@ -1,6 +1,8 @@
 spring:
   application:
     name: edutrust-backend
+  config:
+    import: optional:classpath:/institution.yml,optional:file:${INSTITUTION_CONFIG:./institution.yml}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/edutrust}
     username: ${DB_USERNAME:edutrust}
@@ -40,6 +42,8 @@ app:
     student-password: ${STUDENT_PASSWORD:student123}
 
 edutrust:
+  pipeline:
+    default-version: ${EDUTRUST_PIPELINE_DEFAULT_VERSION:v1}
   cors:
     allowed-origins: ${EDUTRUST_CORS_ALLOWED_ORIGINS:http://localhost:8443,http://localhost:5173,http://127.0.0.1:8443,http://127.0.0.1:5173}
   embedding:
@@ -53,8 +57,13 @@ edutrust:
     target-max-chars: ${EDUTRUST_CHUNKING_TARGET_MAX_CHARS:500}
   retrieval:
     top-k: ${EDUTRUST_RETRIEVAL_TOP_K:5}
+    vector-candidate-k: ${EDUTRUST_RETRIEVAL_VECTOR_CANDIDATE_K:20}
+    fts-candidate-k: ${EDUTRUST_RETRIEVAL_FTS_CANDIDATE_K:20}
+    rrf-k: ${EDUTRUST_RETRIEVAL_RRF_K:60}
   llm:
     base-url: ${EDUTRUST_LLM_BASE_URL:http://localhost:11434}
     model: ${EDUTRUST_LLM_MODEL:llama3.2:3b}
     temperature: ${EDUTRUST_LLM_TEMPERATURE:0}
     timeout-seconds: ${EDUTRUST_LLM_TIMEOUT_SECONDS:180}
+  verification:
+    minimum-score: ${EDUTRUST_VERIFICATION_MINIMUM_SCORE:0.55}

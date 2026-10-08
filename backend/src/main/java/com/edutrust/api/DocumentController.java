@@ -42,10 +42,16 @@ public class DocumentController {
             @RequestParam("academicYear") String academicYear,
             @RequestParam("version") String version,
             @RequestParam("docDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate docDate,
-            @RequestParam(value = "authority", required = false) String authority) throws IOException {
+            @RequestParam(value = "authority", required = false) String authority,
+            @RequestParam(value = "institutionKey", required = false) String institutionKey,
+            @RequestParam(value = "familyKey", required = false) String familyKey,
+            @RequestParam(value = "familyDisplayName", required = false) String familyDisplayName,
+            @RequestParam(value = "effectiveDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate effectiveDate) throws IOException {
         validatePdf(file);
         return ingestionService.ingest(file, new IngestionService.DocumentMetadata(
-                title, department, docType, academicYear, version, docDate, authority));
+                title, department, docType, academicYear, version, docDate, authority,
+                institutionKey, familyKey, familyDisplayName, effectiveDate));
     }
 
     @GetMapping
